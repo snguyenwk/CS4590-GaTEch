@@ -6,7 +6,9 @@ SamplePlayer sp;
 Gain masterGain;
 Glide gainGlide;
 ControlP5 p5;
+
 String filename = "intermission.wav";
+Sample og;
 
 void setup() {
   size(400, 400);
@@ -15,9 +17,11 @@ void setup() {
   
   // Load the sample
   try {
-    sp = new SamplePlayer(ac, SampleManager.sample(dataPath(filename)));
+    og = SampleManager.sample(dataPath(filename));
+    sp = new SamplePlayer(ac, og);
     sp.setKillOnEnd(false);
     sp.setLoopType(SamplePlayer.LoopType.LOOP_FORWARDS);
+    sp.pause(true);
   } catch (Exception ex) {
     println("Problem loading sample: ", filename);
     ex.printStackTrace();
@@ -42,13 +46,14 @@ void setup() {
     .setPosition(50, 60)
     .setSize(300, 20)
     .setLabel("Play Original");
-  
+    
   p5.addButton("reverse")
     .setPosition(50, 100)
     .setSize(300, 20)
-    .setLabel("Reverse");
+    .setLabel("Reverse Audio");
   
   ac.start();
+   
 }
 
 void stop(int value) {
@@ -56,12 +61,47 @@ void stop(int value) {
 }
 
 void playOriginal(int value) {
-  sp.setSample(SampleManager.sample(dataPath(filename)));
+  sp.setSample(og);
   sp.setToLoopStart();
-  sp.start();
+  sp.pause(false);
 }
 
+void reverse(int value) {
+  try {
+    if (og == null) {
+      println("Original sample was not loaded.");
+      return;
+    }
+    
+    int channels = og.getNumChannels();
+    int frames = (int) og.getNumFrames();
+    float[][] frameData = new float[channels][frames];
+    
+    og.getFrames(0, frameData);
+    
+    for (int ch = 0; ch < channels; ch++) {
+      for (int i = 0; i < frames / 2;i++) {
+        float temp = frameData[ch][i];
+        frameData[ch][i] = frameData[ch][frames - 1 - i];
+        frameData[ch][frames - 1 - i] = temp;
+      }
+    }
+    
+    Sample reversed = new Sample(frames, channels, og.getSampleRate());
+    reversed.putFrames(0, frameData);
+    
+    sp.setSample(reversed);
+    sp.setToLoopStart();
+    sp.pause(false);
+    sp.start();
+    
+  } catch (Exception ex) {
+    println("Error reversing the sample: " + ex.getMessage());
+    ex.printStackTrace();
+  }
+}
+    
 
 void draw() {
-  background(0);
+  background(350);
 }
